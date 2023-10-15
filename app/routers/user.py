@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
+
 from .. import models, schemas, utils
 from ..database import get_db
 
@@ -20,6 +21,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     user.password = hashed_password
 
     new_user = models.User(**user.dict())
+    
+    # check for non unique email registration
+    user_email = db.query(models.User).filter(models.User.email == new_user.email).first()
+    if user_email != None:
+        raise HTTPException(status_code=status.HTTP_226_IM_USED,
+                            detail="Account with email already exists")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
